@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../curity-network-cdk-python"
+		},
+		{
+			"path": "../aws-cdk/packages"
 		}
 	],
 	"settings": {}

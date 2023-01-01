@@ -1,0 +1,45 @@
+{
+  "vpc-provider:account=884334638074:filter.tag:Name=curityvpc:region=eu-west-1:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-06b030a44babef71c",
+    "vpcCidrBlock": "10.0.0.0/24",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "Public-Subnet",
+        "type": "Public",
+        "subnets": [
+          {
+            "subnetId": "subnet-034c1a9f07b139ee6",
+            "cidr": "10.0.0.0/26",
+            "availabilityZone": "eu-west-1a",
+            "routeTableId": "rtb-06d84057db3fed52f"
+          },
+          {
+            "subnetId": "subnet-03a81ffe7943de981",
+            "cidr": "10.0.0.64/26",
+            "availabilityZone": "eu-west-1b",
+            "routeTableId": "rtb-0b754526e5329449a"
+          }
+        ]
+      },
+      {
+        "name": "Private-Subnet",
+        "type": "Private",
+        "subnets": [
+          {
+            "subnetId": "subnet-0fcfb62402548567d",
+            "cidr": "10.0.0.128/26",
+            "availabilityZone": "eu-west-1a",
+            "routeTableId": "rtb-0c51c1e18e919826c"
+          },
+          {
+            "subnetId": "subnet-0be00b691b5205765",
+            "cidr": "10.0.0.192/26",
+            "availabilityZone": "eu-west-1b",
+            "routeTableId": "rtb-03aa6aec07104171f"
+          }
+        ]
+      }
+    ]
+  }
+}
