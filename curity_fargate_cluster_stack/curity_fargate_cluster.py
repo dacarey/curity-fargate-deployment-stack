@@ -71,4 +71,10 @@ class CurityFargateCluster(Stack):
             vpc=vpc,
             cluster_name="curity-cluster"
         )
+
+        # Adding service discovery namespace to cluster
+        curity_cluster.add_default_cloud_map_namespace(
+           name="curity"
+        )
+
         return curity_cluster

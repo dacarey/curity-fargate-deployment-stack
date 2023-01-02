@@ -36,7 +36,10 @@ class CurityFargateService:
             load_balancer_name="curity-lb",
             cluster=curity_cluster,
             enable_execute_command=True,
-            service_name="curity-admin-service"
+            service_name="curity-admin-service",
+            cloud_map_options=ecs.CloudMapOptions(
+                name='admin'
+            )
         )
 
         self.curity_service.target_group.configure_health_check(
@@ -92,7 +95,7 @@ class CurityFargateService:
     def createCurityAdminTask(self, construct, curityImage):
         curity_admin_task_definition = ecs.FargateTaskDefinition(
             construct,
-            "CurityAdminTaskDefinition",
+            "curity-admin-task",
             cpu=512,
             memory_limit_mib=2048,
         )
@@ -120,7 +123,7 @@ class CurityFargateService:
         ]
 
         self.container = curity_admin_task_definition.add_container(
-            "CurityAdminContainer",
+            "curity-admin-container",
             image=ecs.ContainerImage.from_docker_image_asset(curityImage),
             port_mappings=container_port_mappings,
             logging=ecs.AwsLogDriver(
