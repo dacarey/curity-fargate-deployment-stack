@@ -1,75 +1,11 @@
 from aws_cdk import (
-    aws_ecs_patterns as ecspattern,
     aws_ecs as ecs,
     aws_ecr_assets as ecr_assets,
-    aws_elasticloadbalancingv2 as lb,
-    aws_route53 as route53,
-    aws_ec2 as ec2,
     aws_iam as iam,
 )
 
 
-class CurityFargateService:
-    def __init__(self, construct, curity_cluster, admin):
-        #
-        # Prepare the Container and associated ECS Task
-        # ====================================================================
-        curityImage = CurityFargateService.chooseDockerAdminImage(construct)
-
-        curity_admin_task_definition = self.createCurityAdminTask(
-            construct, curityImage
-        )
-
-        #
-        #  The Load Balancer needs a public dns zone
-        # ====================================================================
-        hosted_zone = route53.HostedZone.from_hosted_zone_attributes(
-            construct,
-            "HostedZone",
-            zone_name="aws.redkitehill.com",
-            hosted_zone_id="Z06756123LAL436U5E34J",
-        )
-
-        #
-        #  Create the Load Balancer and the BackEnd Service
-        #  Additional notes compared to the simple doc examples
-        #  - This auto-handles creating a certificate for use with https
-        #  - It auto handles DNS registration with the supplied 'domain-name'
-        #  - We configure service discovery ( via cloud map) for the 
-        #    container tasks in the backend.
-        #  - We enable the SSM execute-command option to allow debugging
-        #    into the containers
-        # ====================================================================
-        self.curity_service = ecspattern.ApplicationLoadBalancedFargateService(
-            construct,
-            "CurityService",
-            listener_port=443,
-            protocol=lb.ApplicationProtocol.HTTPS,
-            domain_zone=hosted_zone,
-            task_definition=curity_admin_task_definition,
-            domain_name="curity.aws.redkitehill.com",
-            target_protocol=lb.ApplicationProtocol.HTTPS,
-            load_balancer_name="curity-lb",
-            cluster=curity_cluster,
-            enable_execute_command=True,
-            service_name="curity-admin-service",
-            cloud_map_options=ecs.CloudMapOptions(name="admin"),
-        )
-
-        #
-        # Setup the HealthCheck ping from the LB
-        self.curity_service.target_group.configure_health_check(
-            port="4465", protocol=lb.Protocol.HTTP
-        )
-
-        # https://github.com/aws/aws-cdk/issues/18093
-        # We have to additionally allow the LB Service to
-        # accept the Healthcheck WHERE it is on a different port
-        self.curity_service.service.connections.allow_from(
-            self.curity_service.load_balancer,
-            ec2.Port.tcp(4465),
-            "Allow access from LB to the Fargate Service Healthcheck Port",
-        )
+class BaseFargateService:
 
     #
     #  Choose the Docker Admin Image
@@ -113,12 +49,14 @@ class CurityFargateService:
     #      https://towardsthecloud.com/amazon-ecs-execute-command-access-container
     # =========================================================================
     @staticmethod
-    def createCurityAdminTask(construct, curityImage):
+    def createCurityTaskDefinition(construct, curityImage, adminTask):
+        # See https://curity.io/docs/idsvr/latest/system-admin-guide/system-requirements.html
+        # for actual System Requirments.  e.g.  In production 8GB is recommended
         curity_admin_task_definition = ecs.FargateTaskDefinition(
             construct,
-            "curity-admin-task",
-            cpu=512,
-            memory_limit_mib=2048,
+            "curity-admin-task" if adminTask else "curity-runtime-task",
+            cpu=1024,
+            memory_limit_mib=4096,
         )
 
         container_port_mappings = [
@@ -128,13 +66,21 @@ class CurityFargateService:
             ecs.PortMapping(container_port=4466, host_port=4466),
         ]
 
+        if adminTask:
+            container_port_mappings.append(
+                ecs.PortMapping(container_port=6789, host_port=6789)
+            )
+
+        container_name = (
+          "curity-admin-container" if adminTask else "curity-runtime-container"
+        )
         curity_admin_task_definition.add_container(
-            "curity-admin-container",
+            container_name,
             image=ecs.ContainerImage.from_docker_image_asset(curityImage),
             port_mappings=container_port_mappings,
             logging=ecs.AwsLogDriver(
-                stream_prefix="curityadmin",
-                mode=ecs.AwsLogDriverMode.NON_BLOCKING
+                stream_prefix="curityadmin" if adminTask else "curityruntime",
+                mode=ecs.AwsLogDriverMode.NON_BLOCKING,
             ),
         )
 

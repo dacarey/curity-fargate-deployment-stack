@@ -6,8 +6,9 @@ from aws_cdk import (
 )
 from constructs import Construct
 from curity_fargate_cluster_stack import (
+    admin_fargate_service as adminServiceFactory,
+    runtime_fargate_service as runtimeServiceFactory,
     bastion_deployment as bastianDepl,
-    curity_fargate_service as curityServiceFactory,
 )
 
 
@@ -18,27 +19,70 @@ class CurityFargateCluster(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         #
-        #  Lookup the VPC as this is assumed to have been pre-created for us
+        #  1/ Lookup the VPC as this is assumed to have been pre-created for us
+        # =====================================================================
         vpc = self.lookupVPC()
 
         #
-        #   Create an ECS Cluster inside the VPC
+        # 2/  Create an ECS Cluster inside the VPC
+        # This will also create a private Cloud Map namespace
+        # to allow the services to discover each other
+        # =====================================================================
         curity_cluster = self.createClusterFromVPC(vpc)
 
-        curityAdminService = curityServiceFactory.CurityFargateService(
-            self, curity_cluster, admin=True
+        #
+        # 3/ Create our Curity services
+        # -  The Admin Service is a simple vanilla Fargate service
+        #    with a single admin task.
+        # -  The Runtime Service is a load-balanced Fargate service
+        #    with multiple tasks
+        # =====================================================================
+
+        curityAdminService = adminServiceFactory.CurityAdminService(
+            self, curity_cluster, adminService=True
         )
         CfnOutput(
             self,
-            "curityService",
+            "curityAdminService",
             value=curityAdminService.curity_service.to_string()
         )
         CfnOutput(
             self,
-            "CurityService Task Definition.  Task Role",
+            "CurityAdminService Task Definition.  Task Role",
             value=curityAdminService.curity_service.task_definition.task_role.to_string(),
         )
 
+        curityRuntimeService = runtimeServiceFactory.CurityRuntimeService(
+            self, curity_cluster, adminService=False
+        )
+        CfnOutput(
+            self,
+            "curityRuntimeService",
+            value=curityRuntimeService.curity_service.to_string()
+        )
+        CfnOutput(
+            self,
+            "CurityRuntimeService Task Definition.  Task Role",
+            value=curityRuntimeService.curity_service.task_definition.task_role.to_string(),
+        )
+
+        #
+        # 3a/ We need to ensure the tasks in the Runtime Services
+        #     can comminicate to the master task in the Admin Service
+        # =====================================================================
+
+        curityAdminService.curity_service.connections.allow_from(
+            curityRuntimeService.curity_service.service,
+            ec2.Port.tcp(6789),
+            "Allow the Curity Runtimes Tasks to communicate with the Curity Admin service on the Cluster Communication Port",
+        )
+
+        #
+        # 4/ Create a bastion EC2 instance for support purposes only
+        #   This will allow us to create an SSM tunnel to:-
+        #   - Access the Curity Web Admin locally, without requiring
+        #     a VPN tobe setup.
+        #   - General Debug diagnosis
         bastionDeployment = bastianDepl.BastionDeployment(self, vpc)
         CfnOutput(
             self,
@@ -46,7 +90,13 @@ class CurityFargateCluster(Stack):
             value=bastionDeployment.instance.instance_id
         )
 
-        curityAdminService.curity_service.service.connections.allow_from(
+        curityAdminService.curity_service.connections.allow_from(
+            bastionDeployment.instance,
+            ec2.Port.all_tcp(),
+            "Bastion access to the Fargate Service",
+        )
+
+        curityRuntimeService.curity_service.service.connections.allow_from(
             bastionDeployment.instance,
             ec2.Port.all_tcp(),
             "Bastion access to the Fargate Service",
