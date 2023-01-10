@@ -1,3 +1,4 @@
+"""This module provides the CurityRuntimeService class."""
 from aws_cdk import (
     aws_ecs_patterns as ecspattern,
     aws_ecs as ecs,
@@ -11,14 +12,16 @@ from curity_fargate_cluster_stack.base_fargate_service import (
 
 
 class CurityRuntimeService(BaseFargateService):
-    def __init__(self, construct, curity_cluster, adminService):
+    """This class constricts a Fargate Service to represent a set of Curity Runtime nodes."""
+
+    def __init__(self, construct, curity_cluster):
         #
         # Prepare the Container and associated ECS Task
         # ====================================================================
-        curityImage = CurityRuntimeService.chooseDockerRuntimeImage(construct)
+        curity_image = CurityRuntimeService.choose_docker_runtime_image(construct)
 
-        runtime_task_definition = self.createCurityTaskDefinition(
-            construct, curityImage, False
+        runtime_task_definition = self.create_curity_task_definition(
+            construct, curity_image, False
         )
 
         #

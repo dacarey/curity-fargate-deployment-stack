@@ -1,3 +1,4 @@
+"""This module provides the BaseFargateService class."""
 from aws_cdk import (
     aws_ecs as ecs,
     aws_ecr_assets as ecr_assets,
@@ -6,34 +7,38 @@ from aws_cdk import (
 
 
 class BaseFargateService:
+    """This is a base class consisting of common methods
+    to assist in building a Curity Fargate service."""
 
     #
     #  Choose the Docker Admin Image
     # =========================================================================
     @staticmethod
-    def chooseDockerAdminImage(construct):
-        curityAdminImage = ecr_assets.DockerImageAsset(
+    def choose_docker_admin_image(construct):
+        """ Build an image for the Curity Admin task and upload to ecr if required """
+        curity_admin_image = ecr_assets.DockerImageAsset(
             construct,
             "CurityAdminImage",
             directory="../curity-docker-provisioning/clustered-env",
             file="Dockerfile.admin",
         )
 
-        return curityAdminImage
+        return curity_admin_image
 
     #
     #  Choose the Docker Runtime Image
     # =========================================================================
     @staticmethod
-    def chooseDockerRuntimeImage(construct):
-        curityRuntimeImage = ecr_assets.DockerImageAsset(
+    def choose_docker_runtime_image(construct):
+        """ Build an image for the Curity Runtime task and upload to ecr if required """
+        curity_runtime_image = ecr_assets.DockerImageAsset(
             construct,
             "CurityRuntimeImage",
             directory="../curity-docker-provisioning/clustered-env",
             file="Dockerfile.runtime",
         )
 
-        return curityRuntimeImage
+        return curity_runtime_image
 
     #
     #   create a Fargate Task Definition for the Curity Admin Docker image
@@ -45,16 +50,17 @@ class BaseFargateService:
     #      over the Port Mappings
     #   2/ We are adding to the Task Definition to allow the use of
     #      the "aws ecs execute-command"  per these articles:-
-    #      https://aws.amazon.com/blogs/containers/new-using-amazon-ecs-exec-access-your-containers-fargate-ec2/
-    #      https://towardsthecloud.com/amazon-ecs-execute-command-access-container
+    # https://aws.amazon.com/blogs/containers/new-using-amazon-ecs-exec-access-your-containers-fargate-ec2/
+    # https://towardsthecloud.com/amazon-ecs-execute-command-access-container
     # =========================================================================
     @staticmethod
-    def createCurityTaskDefinition(construct, curityImage, adminTask):
+    def create_curity_task_definition(construct, curity_image, admin_task):
+        """ Create the Curity Task Definition """
         # See https://curity.io/docs/idsvr/latest/system-admin-guide/system-requirements.html
         # for actual System Requirments.  e.g.  In production 8GB is recommended
         curity_admin_task_definition = ecs.FargateTaskDefinition(
             construct,
-            "curity-admin-task" if adminTask else "curity-runtime-task",
+            "curity-admin-task" if admin_task else "curity-runtime-task",
             cpu=1024,
             memory_limit_mib=4096,
         )
@@ -66,20 +72,20 @@ class BaseFargateService:
             ecs.PortMapping(container_port=4466, host_port=4466),
         ]
 
-        if adminTask:
+        if admin_task:
             container_port_mappings.append(
                 ecs.PortMapping(container_port=6789, host_port=6789)
             )
 
         container_name = (
-          "curity-admin-container" if adminTask else "curity-runtime-container"
+            "curity-admin-container" if admin_task else "curity-runtime-container"
         )
         curity_admin_task_definition.add_container(
             container_name,
-            image=ecs.ContainerImage.from_docker_image_asset(curityImage),
+            image=ecs.ContainerImage.from_docker_image_asset(curity_image),
             port_mappings=container_port_mappings,
             logging=ecs.AwsLogDriver(
-                stream_prefix="curityadmin" if adminTask else "curityruntime",
+                stream_prefix="curityadmin" if admin_task else "curityruntime",
                 mode=ecs.AwsLogDriverMode.NON_BLOCKING,
             ),
         )
@@ -87,12 +93,12 @@ class BaseFargateService:
         #
         # This list of permissions is curated from these sources
         # 1/ The first 7 permissions are essentially derived from
-        #   https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
+        # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
         #   1a/ N.B. Possibly I could optimise this first set to use the AWS
         #       recommended AmazonECSTaskExecutionRolePolicy.  See
-        #       https://www.evernote.com/client/web?login=true#?b=533976b7-9966-468e-a6bd-c643b2eef72a&n=9241277e-3b27-48d1-addb-770bb444655c&
+        # https://www.evernote.com/client/web?login=true#?b=533976b7-9966-468e-a6bd-c643b2eef72a&n=9241277e-3b27-48d1-addb-770bb444655c&
         # 2/ The additional set of ssmmessages permissions are derived from
-        #    https://aws.amazon.com/blogs/containers/new-using-amazon-ecs-exec-access-your-containers-fargate-ec2/
+        # https://aws.amazon.com/blogs/containers/new-using-amazon-ecs-exec-access-your-containers-fargate-ec2/
 
         curity_admin_task_definition.add_to_task_role_policy(
             iam.PolicyStatement(

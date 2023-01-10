@@ -11,9 +11,9 @@ class CurityAdminService(BaseFargateService):
         #
         # Prepare the Container and associated ECS Task
         # ====================================================================
-        curityImage = CurityAdminService.chooseDockerAdminImage(construct)
+        curityImage = CurityAdminService.choose_docker_admin_image(construct)
 
-        admin_task_definition = self.createCurityTaskDefinition(
+        admin_task_definition = self.create_curity_task_definition(
             construct, curityImage, adminService
         )
 

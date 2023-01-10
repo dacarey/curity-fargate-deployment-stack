@@ -1,15 +1,13 @@
-from aws_cdk import (
-    aws_ec2 as ec2,
-    aws_iam as iam,
-    Tags
-)
-
+"""This module provides the BastionDeployment class."""
+from aws_cdk import aws_ec2 as ec2, aws_iam as iam, Tags
 
 #
 #
 #  This code is based on this GitHUB repository
 #  https://github.com/aws-samples/aws-cdk-examples/tree/master/python/ec2/instance
 class BastionDeployment:
+    """This class contains the CDK code to create a free-tier EC2 instance with SSM support."""
+
     def __init__(self, construct, vpc):
         # AMI
         amzn_linux = ec2.MachineImage.latest_amazon_linux(
@@ -21,8 +19,9 @@ class BastionDeployment:
 
         # Instance Role and SSM Managed Policy
         role = iam.Role(
-            construct, "InstanceSSM",
-            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
+            construct,
+            "InstanceSSM",
+            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"),
         )
 
         role.add_managed_policy(
