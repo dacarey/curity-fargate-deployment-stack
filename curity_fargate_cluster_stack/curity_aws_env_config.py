@@ -13,15 +13,13 @@ schema = {
 
 def get_config(app:App):
     """get the target identifier"""
-    target = app.node.try_get_context(key="target")
+    target = app.node.try_get_context(key="curity-aws-env")
     if not target:
         raise LookupError(
-            "The 'target' variable missing on the cdk command."
+            "The 'curity-aws-env' variable missing on the cdk command."
             + "See cdk.json for available values, e.g. 'dw-dev','dw-sit', 'dw-uat'."
-            + "Then pass these into you cdk command as '-c target=dw-dev"
+            + "Then pass these into you cdk command as '--context curity-aws-env=dw-dev"
         )
-
-    print(f"target value is {target}")
 
     target_config = app.node.try_get_context(key=target)
     if not target_config:

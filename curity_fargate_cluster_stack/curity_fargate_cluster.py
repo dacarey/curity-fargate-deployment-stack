@@ -22,7 +22,11 @@ class CurityFargateCluster(Stack):
     def __init__(self, scope: Construct, construct_id: str, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        print(f"config contains {config}")
+        CfnOutput(
+            self,
+            "Curity AWS configurable environment settings",
+            value=str(config),
+        )
 
         #
         #  1/ Lookup the VPC as this is assumed to have been pre-created for us
@@ -112,7 +116,7 @@ class CurityFargateCluster(Stack):
     # ==================================================================
     def lookup_vpc(self, config):
         """lookup an existing vpc based on its name"""
-        vpc = ec2.Vpc.from_lookup(self, "VPC", vpc_name=config.get('vpcname'))
+        vpc = ec2.Vpc.from_lookup(self, "VPC", vpc_name=config.get("vpcname"))
         if not vpc:
             raise Exception(f"Failed to find VPC: '${config.get('vpcname')}'")
         return vpc
