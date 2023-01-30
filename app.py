@@ -5,36 +5,13 @@ import os
 import aws_cdk as cdk
 
 from curity_fargate_cluster_stack.curity_fargate_cluster import CurityFargateCluster
-
-def get_config():
-    """get the stage identifier"""
-    stage = app.node.try_get_context(key="stage")
-    if not stage:
-        raise LookupError(
-            "The 'stage' variable missing on the cdk command."
-            + "See cdk.json for available values, e.g. 'dw-dev','dw-sit', 'dw-uat'."
-            + "Then pass these into you cdk command as '-c stage=dw-dev"
-        )
-
-    print(f"stage value is {stage}")
-
-    stage_config = app.node.try_get_context(key=stage)
-    if not stage_config:
-        raise LookupError(
-            f"The '{stage}' stage node is not configured in the cdk.json file"
-        )
-
-    print(f"stageConfig value is {stage_config}")
-   
-
+from curity_fargate_cluster_stack.curity_aws_env_config import get_config
 
 #
 #  START HERE
 # ==========================================================
 
 app = cdk.App()
-
-get_config()
 
 CurityFargateCluster(
     app,
@@ -52,6 +29,7 @@ CurityFargateCluster(
     # env=cdk.Environment(account='123456789012', region='us-east-1'),
     # For more information, see
     #  https://docs.aws.amazon.com/cdk/latest/guide/environments.html
+    config=get_config(app),
 )
 
 app.synth()

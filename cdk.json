@@ -35,10 +35,12 @@
     "@aws-cdk/aws-iam:standardizedServicePrincipals": true,
     "@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker": true,
 
-    "dw-rkh":{
+    "rkh":{
+      "vpcname": "curityvpc"
 
     },
     "dw-dev":{
+      "vpcname": "dwvpc"
       
     }
   }

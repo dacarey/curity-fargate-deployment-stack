@@ -19,13 +19,15 @@ class CurityFargateCluster(Stack):
     """This class creates a Fargate Cluster for a Curity Cluster consisting
     of an Admin Service and a Runtime Service."""
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        print(f"config contains {config}")
 
         #
         #  1/ Lookup the VPC as this is assumed to have been pre-created for us
         # =====================================================================
-        vpc = self.lookup_vpc()
+        vpc = self.lookup_vpc(config)
 
         #
         # 2/  Create an ECS Cluster inside the VPC
@@ -108,11 +110,11 @@ class CurityFargateCluster(Stack):
     #
     #  lookup the VPC -  Otherwise raise an exception
     # ==================================================================
-    def lookup_vpc(self):
+    def lookup_vpc(self, config):
         """lookup an existing vpc based on its name"""
-        vpc = ec2.Vpc.from_lookup(self, "VPC", vpc_name="curityvpc")
+        vpc = ec2.Vpc.from_lookup(self, "VPC", vpc_name=config.get('vpcname'))
         if not vpc:
-            raise Exception("Failed to find VPC: 'curityvpc'")
+            raise Exception(f"Failed to find VPC: '${config.get('vpcname')}'")
         return vpc
 
     #
