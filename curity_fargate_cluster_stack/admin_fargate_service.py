@@ -1,3 +1,4 @@
+""" This module contains the class for the Curity Admin Service """
 from aws_cdk import (
     aws_ecs as ecs,
 )
@@ -7,14 +8,15 @@ from curity_fargate_cluster_stack.base_fargate_service import (
 
 
 class CurityAdminService(BaseFargateService):
-    def __init__(self, construct, curity_cluster, adminService):
+    """ This class creates and deploys the Curity Admin node within the ECS Cluster """
+    def __init__(self, construct, curity_cluster, config, admin_service):
         #
         # Prepare the Container and associated ECS Task
         # ====================================================================
-        curityImage = CurityAdminService.choose_docker_admin_image(construct)
+        curity_image = CurityAdminService.choose_docker_admin_image(construct)
 
         admin_task_definition = self.create_curity_task_definition(
-            construct, curityImage, adminService
+            construct, curity_image, config, admin_service
         )
 
         #

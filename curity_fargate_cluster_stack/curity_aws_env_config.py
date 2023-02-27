@@ -1,4 +1,6 @@
 """This module support retrieving and validatind configuration data from the cdk.json file."""
+import os.path
+
 from jsonschema import validate
 from aws_cdk import App
 
@@ -6,6 +8,7 @@ schema = {
     "type": "object",
     "properties": {
         "vpcname": {"type": "string"},
+        "envfile": {"type": "string"},
     },
     "required": ["vpcname"],
 }
@@ -28,5 +31,16 @@ def get_config(app:App):
         )
 
     validate(instance=target_config, schema=schema)
+
+    # Validate Optional Parameters if supplied
+
+    # check if environment_file_path exists and add it to the container definition if it does
+    environment_file_path = target_config.get("envfile")
+    if environment_file_path and not os.path.isfile(environment_file_path):
+        raise LookupError(
+            f"The 'envfile' attribute is set to '{environment_file_path}'" +
+            " in cdk.json but this file does not exist."
+        )
+
 
     return target_config

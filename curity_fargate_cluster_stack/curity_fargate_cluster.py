@@ -4,6 +4,7 @@ from aws_cdk import (
     CfnOutput,
     aws_ec2 as ec2,
     aws_ecs as ecs,
+    aws_s3_assets as s3_assets
 )
 from constructs import Construct
 from curity_fargate_cluster_stack import (
@@ -34,14 +35,21 @@ class CurityFargateCluster(Stack):
         vpc = self.lookup_vpc(config)
 
         #
-        # 2/  Create an ECS Cluster inside the VPC
+        #  2/ Sync the envfile if it is present
+        # =====================================================================
+        env_file = config.get("envfile")
+        if env_file:
+            config["envfile_asset"] = self.sync_envfile( env_file)
+
+        #
+        # 3/  Create an ECS Cluster inside the VPC
         # This will also create a private Cloud Map namespace
         # to allow the services to discover each other
         # =====================================================================
         curity_cluster = self.create_cluster_from_vpc(vpc)
 
         #
-        # 3/ Create our Curity services
+        # 4/ Create our Curity services
         # -  The Admin Service is a simple vanilla Fargate service
         #    with a single admin task.
         # -  The Runtime Service is a load-balanced Fargate service
@@ -49,7 +57,7 @@ class CurityFargateCluster(Stack):
         # =====================================================================
 
         curity_admin_service = adminServiceFactory.CurityAdminService(
-            self, curity_cluster, adminService=True
+            self, curity_cluster, config, admin_service=True,
         )
         CfnOutput(
             self,
@@ -63,7 +71,7 @@ class CurityFargateCluster(Stack):
         )
 
         curity_runtime_service = runtimeServiceFactory.CurityRuntimeService(
-            self, curity_cluster
+            self, curity_cluster, config
         )
         CfnOutput(
             self,
@@ -135,3 +143,20 @@ class CurityFargateCluster(Stack):
         curity_cluster.add_default_cloud_map_namespace(name="curity")
 
         return curity_cluster
+
+    #
+    #  sync the env file to an S3 bucket  -  Otherwise raise an exception
+    # ==================================================================
+    def sync_envfile(self, env_file):
+        """This class contains the CDK code to synchronize our Curity
+        environment file to an S3 bucket so that it can be referenced by the
+        Fargate service classes."""
+
+        # Create an Asset from the local file and upload it to the S3 bucket if it has changed
+        asset = s3_assets.Asset(self, "CurityEnvFile", path=env_file)
+
+        CfnOutput(self, "S3BucketName", value=asset.s3_bucket_name)
+        CfnOutput(self, "S3ObjectKey", value=asset.s3_object_key)
+        CfnOutput(self, "S3HttpURL", value=asset.http_url)
+
+        return asset

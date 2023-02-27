@@ -36,7 +36,8 @@
     "@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker": true,
 
     "rkh":{
-      "vpcname": "curityvpc"
+      "vpcname": "curityvpc",
+      "envfile": "../curity-docker-provisioning/local.plain.env"
 
     },
     "dw-dev":{

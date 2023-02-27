@@ -14,14 +14,14 @@ from curity_fargate_cluster_stack.base_fargate_service import (
 class CurityRuntimeService(BaseFargateService):
     """This class constricts a Fargate Service to represent a set of Curity Runtime nodes."""
 
-    def __init__(self, construct, curity_cluster):
+    def __init__(self, construct, curity_cluster, config):
         #
         # Prepare the Container and associated ECS Task
         # ====================================================================
         curity_image = CurityRuntimeService.choose_docker_runtime_image(construct)
 
         runtime_task_definition = self.create_curity_task_definition(
-            construct, curity_image, False
+            construct, curity_image, config,  False
         )
 
         #

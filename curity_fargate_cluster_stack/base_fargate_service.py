@@ -3,6 +3,7 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecr_assets as ecr_assets,
     aws_iam as iam,
+    aws_s3_assets as s3_assets,
 )
 
 
@@ -15,11 +16,11 @@ class BaseFargateService:
     # =========================================================================
     @staticmethod
     def choose_docker_admin_image(construct):
-        """ Build an image for the Curity Admin task and upload to ecr if required """
+        """Build an image for the Curity Admin task and upload to ecr if required"""
         curity_admin_image = ecr_assets.DockerImageAsset(
             construct,
             "CurityAdminImage",
-            directory="../curity-docker-provisioning/clustered-env",
+            directory="../curity-docker-provisioning",
             file="Dockerfile.admin",
         )
 
@@ -30,11 +31,11 @@ class BaseFargateService:
     # =========================================================================
     @staticmethod
     def choose_docker_runtime_image(construct):
-        """ Build an image for the Curity Runtime task and upload to ecr if required """
+        """Build an image for the Curity Runtime task and upload to ecr if required"""
         curity_runtime_image = ecr_assets.DockerImageAsset(
             construct,
             "CurityRuntimeImage",
-            directory="../curity-docker-provisioning/clustered-env",
+            directory="../curity-docker-provisioning",
             file="Dockerfile.runtime",
         )
 
@@ -54,11 +55,11 @@ class BaseFargateService:
     # https://towardsthecloud.com/amazon-ecs-execute-command-access-container
     # =========================================================================
     @staticmethod
-    def create_curity_task_definition(construct, curity_image, admin_task):
-        """ Create the Curity Task Definition """
+    def create_curity_task_definition(construct, curity_image, config, admin_task):
+        """Create the Curity Task Definition"""
         # See https://curity.io/docs/idsvr/latest/system-admin-guide/system-requirements.html
         # for actual System Requirments.  e.g.  In production 8GB is recommended
-        curity_admin_task_definition = ecs.FargateTaskDefinition(
+        curity_task_definition = ecs.FargateTaskDefinition(
             construct,
             "curity-admin-task" if admin_task else "curity-runtime-task",
             cpu=1024,
@@ -80,7 +81,10 @@ class BaseFargateService:
         container_name = (
             "curity-admin-container" if admin_task else "curity-runtime-container"
         )
-        curity_admin_task_definition.add_container(
+        envfile: str = config.get("envfile")
+        envfile_asset: s3_assets.Asset = config.get("envfile_bucket")
+
+        curity_task_definition.add_container(
             container_name,
             image=ecs.ContainerImage.from_docker_image_asset(curity_image),
             port_mappings=container_port_mappings,
@@ -88,6 +92,13 @@ class BaseFargateService:
                 stream_prefix="curityadmin" if admin_task else "curityruntime",
                 mode=ecs.AwsLogDriverMode.NON_BLOCKING,
             ),
+            environment_files=[
+                ecs.EnvironmentFile.from_bucket(
+                    envfile_asset.s3_bucket_name, envfile_asset.s3_object_key
+                )
+            ]
+            if envfile
+            else None,
         )
 
         #
@@ -100,7 +111,7 @@ class BaseFargateService:
         # 2/ The additional set of ssmmessages permissions are derived from
         # https://aws.amazon.com/blogs/containers/new-using-amazon-ecs-exec-access-your-containers-fargate-ec2/
 
-        curity_admin_task_definition.add_to_task_role_policy(
+        curity_task_definition.add_to_task_role_policy(
             iam.PolicyStatement(
                 actions=[
                     "logs:PutLogEvents",
@@ -114,9 +125,11 @@ class BaseFargateService:
                     "ssmmessages:CreateDataChannel",
                     "ssmmessages:OpenControlChannel",
                     "ssmmessages:OpenDataChannel",
+                    "s3:GetObject"
+                    "s3:GetBucketLocation"
                 ],
                 resources=["*"],
             )
         )
 
-        return curity_admin_task_definition
+        return curity_task_definition
