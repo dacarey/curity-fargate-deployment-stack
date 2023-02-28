@@ -81,7 +81,6 @@ class BaseFargateService:
         container_name = (
             "curity-admin-container" if admin_task else "curity-runtime-container"
         )
-        envfile: str = config.get("envfile")
         envfile_asset: s3_assets.Asset = config.get("envfile_bucket")
 
         curity_task_definition.add_container(
