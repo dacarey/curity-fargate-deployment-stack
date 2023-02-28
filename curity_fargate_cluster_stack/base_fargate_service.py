@@ -97,7 +97,7 @@ class BaseFargateService:
                     envfile_asset.s3_bucket_name, envfile_asset.s3_object_key
                 )
             ]
-            if envfile
+            if envfile_asset
             else None,
         )
 
@@ -125,7 +125,7 @@ class BaseFargateService:
                     "ssmmessages:CreateDataChannel",
                     "ssmmessages:OpenControlChannel",
                     "ssmmessages:OpenDataChannel",
-                    "s3:GetObject"
+                    "s3:GetObject",
                     "s3:GetBucketLocation"
                 ],
                 resources=["*"],
