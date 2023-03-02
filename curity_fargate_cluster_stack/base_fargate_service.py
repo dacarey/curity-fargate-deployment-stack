@@ -81,7 +81,7 @@ class BaseFargateService:
         container_name = (
             "curity-admin-container" if admin_task else "curity-runtime-container"
         )
-        envfile_asset: s3_assets.Asset = config.get("envfile_bucket")
+        envfile_asset: s3_assets.Asset = config.get("envfile_asset")
 
         curity_task_definition.add_container(
             container_name,
@@ -93,7 +93,7 @@ class BaseFargateService:
             ),
             environment_files=[
                 ecs.EnvironmentFile.from_bucket(
-                    envfile_asset.s3_bucket_name, envfile_asset.s3_object_key
+                    envfile_asset.bucket, envfile_asset.s3_object_key
                 )
             ]
             if envfile_asset
@@ -125,7 +125,7 @@ class BaseFargateService:
                     "ssmmessages:OpenControlChannel",
                     "ssmmessages:OpenDataChannel",
                     "s3:GetObject",
-                    "s3:GetBucketLocation"
+                    "s3:GetBucketLocation",
                 ],
                 resources=["*"],
             )
