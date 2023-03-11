@@ -55,7 +55,7 @@ class CurityRuntimeService(BaseFargateService):
             target_protocol=lb.ApplicationProtocol.HTTPS,
             load_balancer_name="curity-lb",
             cluster=curity_cluster,
-            enable_execute_command=True,
+            enable_execute_command=True,   # If set, then CDK will also update the Task Role for us.
             service_name="curity-runtime-service",
             cloud_map_options=ecs.CloudMapOptions(name="runtime"),
         )

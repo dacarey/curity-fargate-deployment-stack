@@ -101,29 +101,36 @@ class BaseFargateService:
         )
 
         #
-        # This list of permissions is curated from these sources
-        # 1/ The first 7 permissions are essentially derived from
-        # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
-        #   1a/ N.B. Possibly I could optimise this first set to use the AWS
-        #       recommended AmazonECSTaskExecutionRolePolicy.  See
-        # https://www.evernote.com/client/web?login=true#?b=533976b7-9966-468e-a6bd-c643b2eef72a&n=9241277e-3b27-48d1-addb-770bb444655c&
-        # 2/ The additional set of ssmmessages permissions are derived from
-        # https://aws.amazon.com/blogs/containers/new-using-amazon-ecs-exec-access-your-containers-fargate-ec2/
+        #  Setting up the 'Task Role' -  The things we care about
+        #  -  It will need Cloudwatch log access so that Curity can get its logs to Cloudwatch
+        #  -  We need ECS Exec access to diagnose issues
+        #
+        #  There is no specific setup here though!
+        #  See my notes for more info on how CDK sets this up
+        # https://www.evernote.com/shard/s300/nl/44235593/eeeb5148-02ed-46da-917f-3704d175f781?title=Task%20role%20vs%20Task%20execution%20role%20in%20Amazon%20ECS
+        #
+        #  We do have a future requirement to write to a Promtheus workspace which is why
+        #  we have left the aps:RemoteWrite command in place
 
         curity_task_definition.add_to_task_role_policy(
             iam.PolicyStatement(
                 actions=[
-                    "logs:PutLogEvents",
-                    "logs:CreateLogGroup",
-                    "logs:CreateLogStream",
-                    "logs:DescribeLogStreams",
-                    "logs:DescribeLogGroups",
-                    "ssm:GetParameters",
                     "aps:RemoteWrite",
-                    "ssmmessages:CreateControlChannel",
-                    "ssmmessages:CreateDataChannel",
-                    "ssmmessages:OpenControlChannel",
-                    "ssmmessages:OpenDataChannel",
+                ],
+                resources=["*"],
+            )
+        )
+
+        #
+        #  Setting up the 'Task Execution Role' -  The things we care about
+        #  -  The ECS Agent needs to access an ECR Repository for our image
+        #  -  It also needs to access an S3 bucket containing the environment file for Curity
+        #
+        #  See my Evernote article again on how the ECR rights are automatically added
+        #  However, we do need to add S3 access
+        curity_task_definition.add_to_execution_role_policy(
+            iam.PolicyStatement(
+                actions=[
                     "s3:GetObject",
                     "s3:GetBucketLocation",
                 ],

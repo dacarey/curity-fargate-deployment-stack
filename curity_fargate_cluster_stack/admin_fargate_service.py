@@ -30,7 +30,7 @@ class CurityAdminService(BaseFargateService):
             "CurityAdminService",
             task_definition=admin_task_definition,
             cluster=curity_cluster,
-            enable_execute_command=True,
+            enable_execute_command=True,   # If set, then CDK will also update the Task Role for us.
             service_name="curity-admin-service",
             cloud_map_options=ecs.CloudMapOptions(name="admin"),
             desired_count=1,

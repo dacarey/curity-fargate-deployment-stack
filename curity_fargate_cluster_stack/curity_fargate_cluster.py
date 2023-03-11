@@ -2,9 +2,11 @@
 from aws_cdk import (
     Stack,
     CfnOutput,
+    Duration,
     aws_ec2 as ec2,
     aws_ecs as ecs,
-    aws_s3_assets as s3_assets
+    aws_s3_assets as s3_assets,
+    aws_servicediscovery as sd
 )
 from constructs import Construct
 from curity_fargate_cluster_stack import (
@@ -99,12 +101,18 @@ class CurityFargateCluster(Stack):
         #
         # 4/ Create a bastion EC2 instance for support purposes only
         #   This will allow us to create an SSM tunnel to:-
-        #   - Access the Curity Web Admin locally, without requiring
-        #     a VPN tobe setup.
-        #   - General Debug diagnosis
+        #   - Access the Curity Web Admin locally, via an SSM tunnel
+        #      ( means no VPN is required)
+        #   - See the ssm.sh script on how to set this up
+        #
         bastion_deployment = bastianDepl.BastionDeployment(self, vpc)
+        bastion_instance_id=bastion_deployment.instance.instance_id
         CfnOutput(
-            self, "bastionInstance", value=bastion_deployment.instance.instance_id
+            self, "bastionInstance", value=bastion_instance_id
+        )
+        bastion_ipaddress=bastion_deployment.instance.instance_private_ip
+        CfnOutput(
+            self, "bastionInstance IP", value=bastion_ipaddress
         )
 
         curity_admin_service.curity_service.connections.allow_from(
@@ -118,6 +126,16 @@ class CurityFargateCluster(Stack):
             ec2.Port.all_tcp(),
             "Bastion access to the Fargate Service",
         )
+
+        # Add the EC2 instance to the CloudMap namespace
+        service = self.namespace.create_service("BastionService",
+            dns_record_type=sd.DnsRecordType.A,
+            dns_ttl=Duration.seconds(60)
+        )
+
+        # Register the EC2 instance with the service
+        service.register_ip_instance("BastionInstance",
+                                     ipv4=bastion_ipaddress)
 
     #
     #  lookup the VPC -  Otherwise raise an exception
@@ -140,7 +158,7 @@ class CurityFargateCluster(Stack):
         )
 
         # Adding service discovery namespace to cluster
-        curity_cluster.add_default_cloud_map_namespace(name="curity")
+        self.namespace = curity_cluster.add_default_cloud_map_namespace(name="curity")
 
         return curity_cluster
 
