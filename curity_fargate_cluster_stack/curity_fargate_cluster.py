@@ -100,10 +100,15 @@ class CurityFargateCluster(Stack):
 
         #
         # 4/ Create a bastion EC2 instance for support purposes only
-        #   This will allow us to create an SSM tunnel to:-
-        #   - Access the Curity Web Admin locally, via an SSM tunnel
-        #      ( means no VPN is required)
-        #   - See the ssm.sh script on how to set this up
+        #   This will allow us to create an SSM tunnel to do diagnostics
+        #   and access the Curity Admin host via IP
+        #
+        #   Note that as of March 2023 i was also considering to an ssm 
+        #   tunnel straight to the admin node for that purpose.
+        #   See:-  https://aws.amazon.com/blogs/mt/use-port-forwarding-in-aws-systems-manager-session-manager-to-connect-to-remote-hosts/
+        #
+        #   However i still do think is may be useful having this bastion node
+        #   so not planning to throw this away.   I may just make it conditional via cdk.json
         #
         bastion_deployment = bastianDepl.BastionDeployment(self, vpc)
         bastion_instance_id=bastion_deployment.instance.instance_id
@@ -127,15 +132,6 @@ class CurityFargateCluster(Stack):
             "Bastion access to the Fargate Service",
         )
 
-        # Add the EC2 instance to the CloudMap namespace
-        service = self.namespace.create_service("BastionService",
-            dns_record_type=sd.DnsRecordType.A,
-            dns_ttl=Duration.seconds(60)
-        )
-
-        # Register the EC2 instance with the service
-        service.register_ip_instance("BastionInstance",
-                                     ipv4=bastion_ipaddress)
 
     #
     #  lookup the VPC -  Otherwise raise an exception
