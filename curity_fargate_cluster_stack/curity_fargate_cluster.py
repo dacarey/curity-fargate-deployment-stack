@@ -123,13 +123,13 @@ class CurityFargateCluster(Stack):
         curity_admin_service.curity_service.connections.allow_from(
             bastion_deployment.instance,
             ec2.Port.all_tcp(),
-            "Bastion access to the Fargate Service",
+            "Bastion access to the Fargate Admin Service",
         )
 
         curity_runtime_service.curity_service.service.connections.allow_from(
             bastion_deployment.instance,
             ec2.Port.all_tcp(),
-            "Bastion access to the Fargate Service",
+            "Bastion access to the Fargate Rungate Service",
         )
 
 
