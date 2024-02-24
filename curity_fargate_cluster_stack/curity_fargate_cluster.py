@@ -2,11 +2,9 @@
 from aws_cdk import (
     Stack,
     CfnOutput,
-    Duration,
     aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_s3_assets as s3_assets,
-    aws_servicediscovery as sd
 )
 from constructs import Construct
 from curity_fargate_cluster_stack import (
@@ -105,7 +103,7 @@ class CurityFargateCluster(Stack):
         #
         #   Note that as of March 2023 i was also considering to an ssm 
         #   tunnel straight to the admin node for that purpose.
-        #   See:-  https://aws.amazon.com/blogs/mt/use-port-forwarding-in-aws-systems-manager-session-manager-to-connect-to-remote-hosts/
+        # See:-  https://aws.amazon.com/blogs/mt/use-port-forwarding-in-aws-systems-manager-session-manager-to-connect-to-remote-hosts/
         #
         #   However i still do think is may be useful having this bastion node
         #   so not planning to throw this away.   I may just make it conditional via cdk.json
